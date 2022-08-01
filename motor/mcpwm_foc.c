@@ -3924,7 +3924,7 @@ static void control_current(motor_all_state_t *motor, float dt) {
 	// Calculate the max length of the voltage space vector without overmodulation.
 	// Is simply 1/sqrt(3) * v_bus. See https://microchipdeveloper.com/mct5001:start. Adds margin with max_duty.
 	float max_v_mag = ONE_BY_SQRT3 * max_duty * state_m->v_bus;
-
+#if(0)
 	// Saturation and anti-windup. Notice that the d-axis has priority as it controls field
 	// weakening and the efficiency.
 	float vd_presat = state_m->vd;
@@ -3937,6 +3937,45 @@ static void control_current(motor_all_state_t *motor, float dt) {
 	state_m->vq_int += (state_m->vq - vq_presat);
 
 	utils_saturate_vector_2d((float*)&state_m->vd, (float*)&state_m->vq, max_v_mag);
+
+#endif
+
+// Start BSD licenced section, Code borrowed from MESC project(https://github.com/davidmolony/MESC_Firmware/)/ST appnote.
+#if(1)
+//Saturation which scales the Vd and Vq equally without prioritising d-axis, see ST appnote UM1052
+	float vd_presat = state_m->vd;
+	float vq_presat = state_m->vq;
+    float VL_SQ = (SQ(state_m->vd)+SQ(state_m->vq));
+    float VMag_maxSQ = SQ(max_v_mag);
+
+    if(VL_SQ>VMag_maxSQ){
+        float one_VL = 1.0f/(sqrtf(VL_SQ));
+        state_m->vd = state_m->vd * max_v_mag*one_VL;
+        state_m->vq = state_m->vq * max_v_mag*one_VL;
+//Anti-Windup - 3 possibilities...
+// 1) IF the vector is saturated, just undo the integration in the FOC PID loop
+#if(0)
+	state_m->vd_int -= Ierr_d * (ki * d_gain_scale * dt);
+	state_m->vq_int -= Ierr_q * (ki * dt);
+#endif
+    }
+
+// 2) Try as per VESC (note that this heavily reduces the integral, since normally ki<<0:
+#if(1)
+	state_m->vd_int += (state_m->vd - vd_presat);
+	state_m->vq_int += (state_m->vq - vq_presat);
+#endif
+// 3)Or a simple clamp:
+#if(0)
+    if(state_m->vd_int > max_v_mag){state_m->vd_int = max_v_mag;}
+    if(state_m->vd_int < -max_v_mag){state_m->vd_int = -max_v_mag;}
+    if(state_m->vq_int > max_v_mag){state_m->vd_int = max_v_mag;}
+    if(state_m->vq_int < -max_v_mag){state_m->vd_int = -max_v_mag;}
+// Set the #if(0) and #if(1) as appropriate to try the anti-windup fix as required...
+#endif
+#endif
+// END BSD licenced section
+
 
 	// mod_d and mod_q are normalized such that 1 corresponds to the max possible voltage:
 	//    voltage_normalize = 1/(2/3*V_bus)
