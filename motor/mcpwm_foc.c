@@ -3969,8 +3969,8 @@ static void control_current(motor_all_state_t *motor, float dt) {
 #if(0)
     if(state_m->vd_int > max_v_mag){state_m->vd_int = max_v_mag;}
     if(state_m->vd_int < -max_v_mag){state_m->vd_int = -max_v_mag;}
-    if(state_m->vq_int > max_v_mag){state_m->vd_int = max_v_mag;}
-    if(state_m->vq_int < -max_v_mag){state_m->vd_int = -max_v_mag;}
+    if(state_m->vq_int > max_v_mag){state_m->vq_int = max_v_mag;}
+    if(state_m->vq_int < -max_v_mag){state_m->vq_int = -max_v_mag;}
 // Set the #if(0) and #if(1) as appropriate to try the anti-windup fix as required...
 #endif
 #endif
